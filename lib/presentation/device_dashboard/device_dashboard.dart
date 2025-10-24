@@ -45,6 +45,8 @@ class _DeviceDashboardState extends State<DeviceDashboard>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _restoreAndReconnectDevices();
+
+    _initCast();
   }
 
   Future<void> _restoreAndReconnectDevices() async {
@@ -104,14 +106,25 @@ class _DeviceDashboardState extends State<DeviceDashboard>
       _saveDevices();
     }
   }
-  void _handleWirelessDisplay() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const WirelessDisplayScreen(),
-      ),
-    );
+  void _handleWirelessDisplay() async {
+    try {
+      final session = await FlutterGoogleCast.showCastDialog();
+      if (session != null) {
+        debugPrint("📺 Connected to Cast device: ${session.deviceName}");
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const WirelessDisplayScreen(),
+          ),
+        );
+      } else {
+        debugPrint("⚠️ No Cast device selected");
+      }
+    } catch (e) {
+      debugPrint("❌ Error during Cast: $e");
+    }
   }
+
 
 
 
@@ -381,6 +394,17 @@ class _DeviceDashboardState extends State<DeviceDashboard>
       );
     }
   }
+
+  Future<void> _initCast() async {
+    try {
+      await FlutterGoogleCast.init(); // เริ่มต้น SDK
+      await FlutterGoogleCast.setReceiverApplicationId("68B2A858"); // 👈 ใช้ App ID จาก Google Cast Console
+      debugPrint("✅ Google Cast SDK initialized successfully");
+    } catch (e) {
+      debugPrint("⚠️ Cast SDK initialization failed: $e");
+    }
+  }
+
 
   int get _connectedDevicesCount =>
       _connectedDevices.where((d) => d['isConnected'] as bool).length;
