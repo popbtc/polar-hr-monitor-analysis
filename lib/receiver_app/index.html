@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <script
+            type="text/javascript"
+            src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"
+    ></script>
+    <title>Polar HR Dashboard</title>
+</head>
+<body style="background-color:black; color:white; font-family:sans-serif; text-align:center;">
+<h1>💓 Polar HR Dashboard</h1>
+<div id="content"></div>
+
+<script>
+    const context = cast.framework.CastReceiverContext.getInstance();
+    const playerManager = context.getPlayerManager();
+    const namespace = "urn:x-cast:polar.dashboard";
+
+    context.addCustomMessageListener(namespace, (event) => {
+      const data = event.data;
+      if (data.type === "hr_update") {
+        document.getElementById("content").innerHTML = data.devices
+          .map(
+            (d) =>
+              `<div style="margin:10px;font-size:20px;">
+                <strong>${d.name}</strong> —
+                <span style="color:${d.connected ? 'lime' : 'red'}">
+                  ${d.hr ?? '--'} bpm
+                </span>
+              </div>`
+          )
+          .join("");
+      }
+    });
+
+    context.start();
+</script>
+</body>
+</html>

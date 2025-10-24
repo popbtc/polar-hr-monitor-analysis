@@ -1,0 +1,40 @@
+name: polar_hr_monitor_analysis
+description: Polar HR Monitor App
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.19.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_google_cast: ^0.3.0
+  location: ^6.0.2
+  # ✅ ใช้ BLE แบบ LightBlue
+  flutter_reactive_ble: ^5.4.0
+
+  # ✅ dependencies อื่นตามโปรเจกต์เดิม
+  cached_network_image: ^3.4.1
+  connectivity_plus: ^7.0.0
+  flutter_slidable: ^4.0.3
+  flutter_svg: ^2.2.1
+  fluttertoast: ^9.0.0
+  google_fonts: ^6.3.2
+  permission_handler: ^12.0.1
+  sizer: ^3.1.3
+  shared_preferences: ^2.2.3
+  dio: ^5.4.0
+  fl_chart: ^1.1.1
+  universal_html: ^2.2.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/images/
