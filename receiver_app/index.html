@@ -1,40 +1,99 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8" />
-    <script
-            type="text/javascript"
-            src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"
-    ></script>
-    <title>Polar HR Dashboard</title>
+    <meta charset="utf-8">
+    <title>Polar HR Receiver</title>
+    <style>
+        body {
+          font-family: sans-serif;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: #000;
+          color: #0f0;
+          height: 100vh;
+          margin: 0;
+          padding: 0;
+        }
+        #hr {
+          font-size: 6rem;
+          margin-top: 2rem;
+        }
+        #device {
+          font-size: 2rem;
+          margin-bottom: 2rem;
+        }
+        #chart {
+          width: 90%;
+          height: 300px;
+        }
+    </style>
 </head>
-<body style="background-color:black; color:white; font-family:sans-serif; text-align:center;">
-<h1>💓 Polar HR Dashboard</h1>
-<div id="content"></div>
+<body>
+<div id="device">Waiting for device …</div>
+<div id="hr">-- bpm</div>
+<canvas id="chart"></canvas>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const context = cast.framework.CastReceiverContext.getInstance();
-    const playerManager = context.getPlayerManager();
-    const namespace = "urn:x-cast:polar.dashboard";
+    const wsUrl = 'wss://polar-hr-monitor-analysis.onrender.com'; // เปลี่ยน URL ให้ตรงกับ server จริง
+    const socket = new WebSocket(wsUrl);
 
-    context.addCustomMessageListener(namespace, (event) => {
-      const data = event.data;
-      if (data.type === "hr_update") {
-        document.getElementById("content").innerHTML = data.devices
-          .map(
-            (d) =>
-              `<div style="margin:10px;font-size:20px;">
-                <strong>${d.name}</strong> —
-                <span style="color:${d.connected ? 'lime' : 'red'}">
-                  ${d.hr ?? '--'} bpm
-                </span>
-              </div>`
-          )
-          .join("");
+    socket.onopen = () => {
+      console.log('WebSocket connected');
+    };
+    socket.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'hr_update') {
+          document.getElementById('device').textContent = msg.device || 'Unknown device';
+          document.getElementById('hr').textContent = msg.hr + ' bpm';
+          addData(msg.hr);
+        }
+      } catch (err) {
+        console.error('Error parsing message', err);
       }
-    });
+    };
+    socket.onclose = () => {
+      console.log('WebSocket closed');
+    };
 
-    context.start();
+    // ใช้ Chart.js สำหรับกราฟ
+    const ctx = document.getElementById('chart').getContext('2d');
+    const data = {
+      labels: [],
+      datasets: [{
+        label: 'HR (bpm)',
+        data: [],
+        borderColor: 'lime',
+        backgroundColor: 'rgba(0,255,0,0.2)',
+        fill: true,
+        tension: 0.3
+      }]
+    };
+    const config = {
+      type: 'line',
+      data: data,
+      options: {
+        animation: false,
+        scales: {
+          x: { display: true, title: { text: 'Time', display: true } },
+          y: { min: 40, max: 200, title: { text: 'Heart Rate (bpm)', display: true } }
+        }
+      }
+    };
+    const chart = new Chart(ctx, config);
+
+    function addData(bpm) {
+      const now = new Date().toLocaleTimeString();
+      data.labels.push(now);
+      data.datasets[0].data.push(bpm);
+      if (data.labels.length > 30) {
+        data.labels.shift();
+        data.datasets[0].data.shift();
+      }
+      chart.update();
+    }
 </script>
 </body>
 </html>

@@ -9,12 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_google_cast: ^0.3.0
   location: ^6.0.2
-  # ✅ ใช้ BLE แบบ LightBlue
   flutter_reactive_ble: ^5.4.0
-
-  # ✅ dependencies อื่นตามโปรเจกต์เดิม
   cached_network_image: ^3.4.1
   connectivity_plus: ^7.0.0
   flutter_slidable: ^4.0.3
@@ -27,6 +23,10 @@ dependencies:
   dio: ^5.4.0
   fl_chart: ^1.1.1
   universal_html: ^2.2.4
+
+  # ✅ ใช้สำหรับเปิดหน้ารับค่า HR บน TV หรือ Browser
+  url_launcher: ^6.3.0
+  web_socket_channel: ^3.0.0
 
 dev_dependencies:
   flutter_test:

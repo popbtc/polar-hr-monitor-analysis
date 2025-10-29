@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
-import 'package:flutter_google_cast/flutter_google_cast.dart';
+
+import 'package:url_launcher/url_launcher.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../core/app_export.dart';
 import './widgets/device_card_widget.dart';
@@ -13,8 +15,6 @@ import './widgets/connection_status_widget.dart';
 import './widgets/device_context_menu_widget.dart';
 import './widgets/empty_state_widget.dart';
 import '../wireless_display_screen/wireless_display_screen.dart';
-
-
 
 class DeviceDashboard extends StatefulWidget {
   const DeviceDashboard({Key? key}) : super(key: key);
@@ -25,8 +25,16 @@ class DeviceDashboard extends StatefulWidget {
 
 class _DeviceDashboardState extends State<DeviceDashboard>
     with TickerProviderStateMixin {
+  bool _isCasting = false;
+
+  WebSocketChannel? _castChannel;
+  final String _receiverUrl = 'https://popbtc.github.io/polar-hr-monitor-analysis/receiver_app/';
+  final String _wsServerUrl = 'wss://polar-hr-monitor-analysis.onrender.com'; // ← เปลี่ยน URL เป็นของคุณ
+
   final _ble = FlutterReactiveBle();
   late TabController _tabController;
+
+  final String namespace = 'urn:x-cast:com.popbtc.hr';
 
   bool _isRefreshing = false;
   bool _isScanning = false;
@@ -45,9 +53,51 @@ class _DeviceDashboardState extends State<DeviceDashboard>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _restoreAndReconnectDevices();
-
-    _initCast();
+    _isCasting = false; // ใช้แค่ toggle สีของปุ่ม
   }
+// เปิดหน้า Receiver App บน TV
+  Future<void> _startCasting() async {
+    try {
+      final Uri url = Uri.parse(_receiverUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+        debugPrint("📺 Receiver launched: $_receiverUrl");
+      }
+      _castChannel = WebSocketChannel.connect(Uri.parse(_wsServerUrl));
+      setState(() => _isCasting = true);
+      debugPrint("✅ Connected to WebSocket Cast Server");
+    } catch (e) {
+      debugPrint("❌ Cast start error: $e");
+    }
+  }
+
+// ปิด cast
+  Future<void> _stopCasting() async {
+    try {
+      await _castChannel?.sink.close();
+      setState(() => _isCasting = false);
+      debugPrint("🛑 Cast stopped");
+    } catch (e) {
+      debugPrint("⚠️ Stop cast error: $e");
+    }
+  }
+
+// ส่งข้อมูล HR ไปยัง Receiver
+  void _sendHRToReceiver(int hr, String deviceName) {
+    if (_castChannel == null) {
+      debugPrint("⚠️ Cast channel not active");
+      return;
+    }
+    final data = {
+      "type": "hr_update",
+      "device": deviceName,
+      "hr": hr,
+      "timestamp": DateTime.now().toIso8601String(),
+    };
+    _castChannel!.sink.add(jsonEncode(data));
+    debugPrint("📤 Sent HR=$hr from $deviceName");
+  }
+
 
   Future<void> _restoreAndReconnectDevices() async {
     final prefs = await SharedPreferences.getInstance();
@@ -106,27 +156,6 @@ class _DeviceDashboardState extends State<DeviceDashboard>
       _saveDevices();
     }
   }
-  void _handleWirelessDisplay() async {
-    try {
-      final session = await FlutterGoogleCast.showCastDialog();
-      if (session != null) {
-        debugPrint("📺 Connected to Cast device: ${session.deviceName}");
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const WirelessDisplayScreen(),
-          ),
-        );
-      } else {
-        debugPrint("⚠️ No Cast device selected");
-      }
-    } catch (e) {
-      debugPrint("❌ Error during Cast: $e");
-    }
-  }
-
-
-
 
   void _connectDevice(String id, String name, {bool forceReconnect = false}) {
     // ถ้าไม่ force และมีอยู่แล้ว → ข้าม
@@ -168,7 +197,6 @@ class _DeviceDashboardState extends State<DeviceDashboard>
 
     _connSubs[id] = connSub;
   }
-
 
   // 🔁 Reconnect อัตโนมัติเมื่อหลุด
   void _reconnectDevice(String id, String name) async {
@@ -215,7 +243,6 @@ class _DeviceDashboardState extends State<DeviceDashboard>
       }
     });
   }
-
   // ❤️ Subscribe HR
   Future<void> _subscribeHR(String id) async {
     try {
@@ -395,17 +422,6 @@ class _DeviceDashboardState extends State<DeviceDashboard>
     }
   }
 
-  Future<void> _initCast() async {
-    try {
-      await FlutterGoogleCast.init(); // เริ่มต้น SDK
-      await FlutterGoogleCast.setReceiverApplicationId("68B2A858"); // 👈 ใช้ App ID จาก Google Cast Console
-      debugPrint("✅ Google Cast SDK initialized successfully");
-    } catch (e) {
-      debugPrint("⚠️ Cast SDK initialization failed: $e");
-    }
-  }
-
-
   int get _connectedDevicesCount =>
       _connectedDevices.where((d) => d['isConnected'] as bool).length;
 
@@ -434,32 +450,35 @@ class _DeviceDashboardState extends State<DeviceDashboard>
 
                       SizedBox(width: 3.w),
 
-                      // 🟢 ปุ่ม Wireless Display (Cast)
-                      GestureDetector(
-                        onTap: _handleWirelessDisplay,
-                        child: Container(
-                          padding: EdgeInsets.all(3.w),
-                          decoration: BoxDecoration(
-                            color: AppTheme.lightTheme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.borderColor),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.shadowColor,
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
+// 🟢 ปุ่ม Wireless Display (Cast)
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: IconButton(
+                          tooltip: _isCasting ? 'Stop Casting' : 'Start Casting',
+                          icon: Icon(
+                            Icons.cast,
+                            color: _isCasting ? Colors.blueAccent : Colors.grey,
                           ),
-                          child: CustomIconWidget(
-                            iconName: 'cast',
-                            color: _connectedDevicesCount > 0
-                                ? AppTheme.accentHighlight
-                                : AppTheme.inactiveDevice,
-                            size: 24,
-                          ),
+                          onPressed: () async {
+                            if (_isCasting) {
+                              await _stopCasting();
+                            } else {
+                              await _startCasting();
+                            }
+                          },
                         ),
                       ),
+
+// 🟩 ปุ่มทดสอบส่ง HR
+                      SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: _isCasting
+                            ? () => _sendHRToReceiver(95, "Polar H10")
+                            : null,
+                        child: const Text("Send HR 95"),
+                      ),
+
                     ],
                   ),
                 ),

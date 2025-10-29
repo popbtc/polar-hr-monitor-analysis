@@ -1,0 +1,12 @@
+{
+  "manifestVersion": 1,
+  "appName": "Polar HR Receiver",
+  "senderApplications": [
+    {
+      "platform": "Android",
+      "packageName": "com.pop.polarhr",
+      "launchUrl": "https://popbtc.github.io/polar-hr-monitor-analysis/receiver_app/"
+    }
+  ],
+  "supportedNamespaces": ["urn:x-cast:com.popbtc.hr"]
+}
