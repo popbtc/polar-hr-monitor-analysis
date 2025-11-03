@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
@@ -29,7 +30,7 @@ class _DeviceDashboardState extends State<DeviceDashboard>
 
   WebSocketChannel? _castChannel;
   final String _receiverUrl = 'https://popbtc.github.io/polar-hr-monitor-analysis/receiver_app/';
-  final String _wsServerUrl = 'wss://polar-hr-monitor-analysis.onrender.com'; // ← เปลี่ยน URL เป็นของคุณ
+  final String _wsServerUrl = 'wss://polar-hr-monitor-analysis.onrender.com/'; // ← เปลี่ยน URL เป็นของคุณ
 
   final _ble = FlutterReactiveBle();
   late TabController _tabController;
@@ -54,7 +55,26 @@ class _DeviceDashboardState extends State<DeviceDashboard>
     _tabController = TabController(length: 3, vsync: this);
     _restoreAndReconnectDevices();
     _isCasting = false; // ใช้แค่ toggle สีของปุ่ม
+    _connectWebSocket();
   }
+  WebSocket? _webSocket;
+  void _broadcastHRToWeb(int hr, String deviceName) {
+    try {
+      final ws = _webSocket;
+      if (ws != null && ws.readyState == WebSocket.open) {
+        final data = jsonEncode({
+          'hr': hr,
+          'deviceName': deviceName,
+          'timestamp': DateTime.now().toIso8601String()
+        });
+        ws.add(data);
+        debugPrint("📤 Broadcasted HR=$hr from $deviceName");
+      }
+    } catch (e) {
+      debugPrint("⚠️ WebSocket broadcast error: $e");
+    }
+  }
+
 // เปิดหน้า Receiver App บน TV
   Future<void> _startCasting() async {
     try {
@@ -98,6 +118,24 @@ class _DeviceDashboardState extends State<DeviceDashboard>
     debugPrint("📤 Sent HR=$hr from $deviceName");
   }
 
+
+  void _connectWebSocket() async {
+    try {
+      _webSocket = await WebSocket.connect('wss://polar-hr-monitor-analysis.onrender.com');
+      debugPrint("✅ Connected to WebSocket Server");
+      _webSocket!.listen(
+            (msg) => debugPrint("📩 Server: $msg"),
+        onError: (err) => debugPrint("⚠️ WebSocket error: $err"),
+        onDone: () {
+          debugPrint("🔌 WebSocket disconnected, retrying...");
+          Future.delayed(const Duration(seconds: 5), _connectWebSocket);
+        },
+      );
+    } catch (e) {
+      debugPrint("❌ WS connect error: $e");
+      Future.delayed(const Duration(seconds: 5), _connectWebSocket);
+    }
+  }
 
   Future<void> _restoreAndReconnectDevices() async {
     final prefs = await SharedPreferences.getInstance();
@@ -260,6 +298,7 @@ class _DeviceDashboardState extends State<DeviceDashboard>
             (data) {
           if (data.isNotEmpty) {
             final hr = data[1];
+            _broadcastHRToWeb(hr, "Polar H10");
             _updateDevice(id, {
               "heartRate": hr,
               "lastUpdate": "${DateTime.now().second % 10}s ago"

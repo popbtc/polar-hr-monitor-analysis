@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <title>Polar HR Receiver</title>
@@ -30,35 +30,48 @@
     </style>
 </head>
 <body>
-<div id="device">Waiting for device …</div>
+<div id="device">Waiting for device…</div>
 <div id="hr">-- bpm</div>
 <canvas id="chart"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const wsUrl = 'wss://polar-hr-monitor-analysis.onrender.com'; // เปลี่ยน URL ให้ตรงกับ server จริง
+    // ✅ ใช้ URL ของ WebSocket server จริง
+    const wsUrl = 'wss://polar-hr-monitor-analysis.onrender.com';
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      console.log('WebSocket connected');
+      console.log('✅ WebSocket connected to', wsUrl);
     };
+
     socket.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'hr_update') {
-          document.getElementById('device').textContent = msg.device || 'Unknown device';
-          document.getElementById('hr').textContent = msg.hr + ' bpm';
-          addData(msg.hr);
+
+        // ✅ รองรับทั้งแบบที่ Flutter ส่ง (ไม่มี type)
+        const hr = msg.hr ?? msg.value;
+        const device = msg.deviceName ?? msg.device ?? "Unknown device";
+
+        if (hr) {
+          document.getElementById('device').textContent = device;
+          document.getElementById('hr').textContent = hr + ' bpm';
+          addData(hr);
         }
       } catch (err) {
-        console.error('Error parsing message', err);
+        console.error('❌ Error parsing message:', err);
       }
     };
-    socket.onclose = () => {
-      console.log('WebSocket closed');
+
+    socket.onerror = (err) => {
+      console.error('⚠️ WebSocket error', err);
     };
 
-    // ใช้ Chart.js สำหรับกราฟ
+    socket.onclose = () => {
+      console.warn('🔌 WebSocket closed, retrying in 5s...');
+      setTimeout(() => location.reload(), 5000);
+    };
+
+    // ✅ Chart.js สำหรับ realtime HR
     const ctx = document.getElementById('chart').getContext('2d');
     const data = {
       labels: [],
@@ -77,8 +90,11 @@
       options: {
         animation: false,
         scales: {
-          x: { display: true, title: { text: 'Time', display: true } },
-          y: { min: 40, max: 200, title: { text: 'Heart Rate (bpm)', display: true } }
+          x: { display: true, title: { text: 'Time', display: true, color: '#0f0' }, ticks: { color: '#0f0' } },
+          y: { min: 40, max: 200, title: { text: 'Heart Rate (bpm)', display: true, color: '#0f0' }, ticks: { color: '#0f0' } }
+        },
+        plugins: {
+          legend: { labels: { color: '#0f0' } }
         }
       }
     };
