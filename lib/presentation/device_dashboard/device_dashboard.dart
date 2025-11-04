@@ -281,7 +281,7 @@ class _DeviceDashboardState extends State<DeviceDashboard>
       }
     });
   }
-  // ❤️ Subscribe HR
+// ❤️ Subscribe HR
   Future<void> _subscribeHR(String id) async {
     try {
       await Future.delayed(const Duration(milliseconds: 500));
@@ -298,12 +298,22 @@ class _DeviceDashboardState extends State<DeviceDashboard>
             (data) {
           if (data.isNotEmpty) {
             final hr = data[1];
-            _broadcastHRToWeb(hr, "Polar H10");
+
+            // ✅ ดึงชื่ออุปกรณ์จริงจาก _connectedDevices
+            final device = _connectedDevices.firstWhere(
+                  (d) => d['id'] == id,
+              orElse: () => {'name': 'Unknown Device'},
+            );
+            final deviceName = device['name'] as String? ?? 'Unknown Device';
+
+            // ✅ ส่งชื่อจริงไปหน้าเว็บ
+            _broadcastHRToWeb(hr, deviceName);
+
             _updateDevice(id, {
               "heartRate": hr,
               "lastUpdate": "${DateTime.now().second % 10}s ago"
             });
-            debugPrint("💓 HR for $id = $hr bpm");
+            debugPrint("💓 HR for $deviceName ($id) = $hr bpm");
           }
         },
         onError: (e) async {
@@ -321,6 +331,7 @@ class _DeviceDashboardState extends State<DeviceDashboard>
       debugPrint("⚠️ HR subscribe error: $e");
     }
   }
+
 
   Future<void> _subscribeHRWithInstance(
       FlutterReactiveBle instance, String id) async {
