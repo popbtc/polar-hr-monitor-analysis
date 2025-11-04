@@ -508,7 +508,7 @@ class _DeviceDashboardState extends State<DeviceDashboard>
                           },
                         ),
                       ),
-
+/*
 // 🟩 ปุ่มทดสอบส่ง HR
                       SizedBox(width: 16),
                       ElevatedButton(
@@ -517,7 +517,7 @@ class _DeviceDashboardState extends State<DeviceDashboard>
                             : null,
                         child: const Text("Send HR 95"),
                       ),
-
+*/
                     ],
                   ),
                 ),

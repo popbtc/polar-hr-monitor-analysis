@@ -1,115 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Polar HR Receiver</title>
+    <meta charset="utf-8" />
+    <title>Polar HR Receiver Dashboard</title>
     <style>
         body {
-          font-family: sans-serif;
+          background: #000;
+          color: #0f0;
+          font-family: 'Segoe UI', sans-serif;
           display: flex;
           flex-direction: column;
           align-items: center;
-          background: #000;
-          color: #0f0;
-          height: 100vh;
           margin: 0;
-          padding: 0;
+          height: 100vh;
         }
-        #hr {
-          font-size: 6rem;
-          margin-top: 2rem;
+        h1 {
+          margin-top: 1rem;
+          color: #0f0;
+          font-size: 1.8rem;
         }
-        #device {
-          font-size: 2rem;
-          margin-bottom: 2rem;
-        }
-        #chart {
+        #grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
           width: 90%;
-          height: 300px;
+          max-width: 1200px;
+          margin-top: 1rem;
+        }
+        .card {
+          border: 2px solid #0f0;
+          border-radius: 12px;
+          padding: 1rem;
+          text-align: center;
+          background: rgba(0, 255, 0, 0.05);
+          transition: background 0.3s, transform 0.3s;
+        }
+        .card.active {
+          background: rgba(0, 255, 0, 0.15);
+          transform: scale(1.03);
+        }
+        .device {
+          font-size: 1.2rem;
+          margin-bottom: 0.5rem;
+          color: #8f8;
+        }
+        .hr {
+          font-size: 2.8rem;
+          font-weight: bold;
+          color: #0f0;
+        }
+        .timestamp {
+          font-size: 0.8rem;
+          color: #888;
+          margin-top: 0.3rem;
         }
     </style>
 </head>
 <body>
-<div id="device">Waiting for device…</div>
-<div id="hr">-- bpm</div>
-<canvas id="chart"></canvas>
+<h1>❤️ Polar HR Dashboard</h1>
+<div id="grid">
+    <!-- จะสร้างการ์ด 8 เครื่องโดยอัตโนมัติ -->
+</div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // ✅ ใช้ URL ของ WebSocket server จริง
-    const wsUrl = 'wss://polar-hr-monitor-analysis.onrender.com';
+    const wsUrl = 'wss://polar-hr-monitor-analysis-1.onrender.com';
     const socket = new WebSocket(wsUrl);
 
+    const devices = {};
+    const grid = document.getElementById('grid');
+
+    // ✅ เตรียมการ์ดไว้ 8 ใบล่วงหน้า
+    for (let i = 1; i <= 8; i++) {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.id = 'card' + i;
+      div.innerHTML = `
+        <div class="device" id="device${i}">Device ${i}</div>
+        <div class="hr" id="hr${i}">--</div>
+        <div class="timestamp" id="time${i}">--</div>
+      `;
+      grid.appendChild(div);
+    }
+
     socket.onopen = () => {
-      console.log('✅ WebSocket connected to', wsUrl);
+      console.log('✅ Connected to WebSocket server');
     };
 
     socket.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-
-        // ✅ รองรับทั้งแบบที่ Flutter ส่ง (ไม่มี type)
         const hr = msg.hr ?? msg.value;
-        const device = msg.deviceName ?? msg.device ?? "Unknown device";
+        const name = msg.deviceName ?? msg.device ?? 'Unknown';
 
-        if (hr) {
-          document.getElementById('device').textContent = device;
-          document.getElementById('hr').textContent = hr + ' bpm';
-          addData(hr);
+        if (!hr) return;
+
+        // ถ้ายังไม่มีอุปกรณ์นี้ใน list
+        if (!devices[name]) {
+          const available = Object.keys(devices).length + 1;
+          if (available > 8) return; // แสดงสูงสุด 8 เครื่อง
+          devices[name] = available;
         }
+
+        const idx = devices[name];
+        const hrElem = document.getElementById('hr' + idx);
+        const devElem = document.getElementById('device' + idx);
+        const timeElem = document.getElementById('time' + idx);
+        const cardElem = document.getElementById('card' + idx);
+
+        hrElem.textContent = hr + ' bpm';
+        devElem.textContent = name;
+        timeElem.textContent = new Date().toLocaleTimeString();
+        cardElem.classList.add('active');
       } catch (err) {
         console.error('❌ Error parsing message:', err);
       }
     };
 
-    socket.onerror = (err) => {
-      console.error('⚠️ WebSocket error', err);
-    };
-
     socket.onclose = () => {
-      console.warn('🔌 WebSocket closed, retrying in 5s...');
+      console.warn('🔌 WebSocket closed, retrying...');
       setTimeout(() => location.reload(), 5000);
     };
 
-    // ✅ Chart.js สำหรับ realtime HR
-    const ctx = document.getElementById('chart').getContext('2d');
-    const data = {
-      labels: [],
-      datasets: [{
-        label: 'HR (bpm)',
-        data: [],
-        borderColor: 'lime',
-        backgroundColor: 'rgba(0,255,0,0.2)',
-        fill: true,
-        tension: 0.3
-      }]
+    socket.onerror = (err) => {
+      console.error('⚠️ WebSocket error', err);
     };
-    const config = {
-      type: 'line',
-      data: data,
-      options: {
-        animation: false,
-        scales: {
-          x: { display: true, title: { text: 'Time', display: true, color: '#0f0' }, ticks: { color: '#0f0' } },
-          y: { min: 40, max: 200, title: { text: 'Heart Rate (bpm)', display: true, color: '#0f0' }, ticks: { color: '#0f0' } }
-        },
-        plugins: {
-          legend: { labels: { color: '#0f0' } }
-        }
-      }
-    };
-    const chart = new Chart(ctx, config);
-
-    function addData(bpm) {
-      const now = new Date().toLocaleTimeString();
-      data.labels.push(now);
-      data.datasets[0].data.push(bpm);
-      if (data.labels.length > 30) {
-        data.labels.shift();
-        data.datasets[0].data.shift();
-      }
-      chart.update();
-    }
 </script>
 </body>
 </html>
