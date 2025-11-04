@@ -29,14 +29,17 @@
           font-size: 1.6rem;
           letter-spacing: 1px;
         }
+
         #grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr); /* ✅ 4 การ์ดต่อแถว */
+          grid-template-columns: repeat(4, 1fr); /* ✅ 4 กล่องต่อแถว */
           gap: 1.5rem;
           width: 90%;
           max-width: 1600px;
           margin-top: 1.5rem;
         }
+
+        /* 🎨 กล่องแต่ละอุปกรณ์ */
         .card {
           background: var(--bg-card);
           border-radius: 20px;
@@ -45,27 +48,43 @@
           transition: all 0.3s ease;
           box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
           border: 3px solid transparent;
-          height: 340px; /* ✅ ขยายกรอบให้ใหญ่ขึ้น */
+          height: 340px;
           display: flex;
           flex-direction: column;
-          justify-content: center;
+          justify-content: space-between; /* ✅ จัดให้ชื่อ-ตัวเลข-เวลาแยกตำแหน่ง */
         }
+
+        /* 🔹 ชื่ออุปกรณ์ (บนสุด) */
         .device {
           font-size: 1.2rem;
           color: #9ed0ff;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.3rem;
+          font-weight: 500;
         }
+
+        /* ❤️ ตัวเลข HR */
         .hr {
-          font-size: 6rem; /* ✅ ขยายตัวเลขให้ใหญ่สุดเท่าที่กล่องรับได้ */
+          font-size: 6rem;
           font-weight: 800;
-          transition: color 0.3s;
           line-height: 1.0;
+          transition: color 0.3s;
+          margin: 0;
         }
+
+        /* 🔹 คำว่า bpm (ขนาดเท่าชื่อ device) */
+        .bpm {
+          font-size: 1.2rem;
+          color: #9ed0ff;
+          margin-top: 0.2rem;
+        }
+
+        /* ⏰ เวลาล่าสุด (ล่างสุด) */
         .timestamp {
-          font-size: 0.8rem;
+          font-size: 0.9rem;
           color: #89a;
-          margin-top: 0.3rem;
+          margin-top: 0.5rem;
         }
+
     </style>
 </head>
 <body>
@@ -86,12 +105,14 @@
       div.id = 'card' + i;
       div.innerHTML = `
         <div class="device" id="device${i}">Device ${i}</div>
-        <div class="hr" id="hr${i}">--</div>
+        <div>
+          <div class="hr" id="hr${i}">--</div>
+          <div class="bpm">bpm</div>
+        </div>
         <div class="timestamp" id="time${i}">--</div>
       `;
       grid.appendChild(div);
     }
-
     // สีตาม HR zone
     function getHrColor(hr) {
       if (hr < 90) return '#3fa9f5';     // blue
