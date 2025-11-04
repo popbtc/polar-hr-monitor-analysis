@@ -29,34 +29,35 @@
           font-size: 1.6rem;
           letter-spacing: 1px;
         }
-
         #grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 1rem;
+          grid-template-columns: repeat(4, 1fr); /* ✅ 4 การ์ดต่อแถว */
+          gap: 1.5rem;
           width: 90%;
-          max-width: 1200px;
-          margin-top: 1rem;
+          max-width: 1600px;
+          margin-top: 1.5rem;
         }
 
         .card {
           background: var(--bg-card);
-          border-radius: 16px;
-          padding: 1rem;
+          border-radius: 20px;
+          padding: 2rem;
           text-align: center;
           transition: all 0.3s ease;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-          border: 2px solid transparent;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+          border: 3px solid transparent;
+          height: 280px; /* ✅ ใหญ่ขึ้นพอดี */
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
-
         .device {
-          font-size: 1rem;
+          font-size: 1.2rem;
           color: #9ed0ff;
-          margin-bottom: 0.4rem;
+          margin-bottom: 0.5rem;
         }
-
         .hr {
-          font-size: 3rem;
+          font-size: 4rem; /* ✅ ตัวเลขใหญ่ขึ้น */
           font-weight: 700;
           transition: color 0.3s;
         }

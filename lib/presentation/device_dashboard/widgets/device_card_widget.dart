@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sizer/sizer.dart';
 import '../../../core/app_export.dart';
+import 'dart:ui';
 
 class DeviceCardWidget extends StatelessWidget {
   final Map<String, dynamic> deviceData;
@@ -16,11 +17,13 @@ class DeviceCardWidget extends StatelessWidget {
 
   Color _getHeartRateZoneColor(int heartRate, bool isConnected) {
     if (!isConnected) return AppTheme.inactiveDevice;
-    if (heartRate < 60) return AppTheme.inactiveDevice;
-    if (heartRate < 100) return AppTheme.connectionSuccess;
-    if (heartRate < 150) return AppTheme.warningState;
-    return AppTheme.heartRateActive;
+    if (heartRate < 90) return Colors.blueAccent;      // 💙 Rest
+    if (heartRate < 120) return Colors.greenAccent;     // 💚 Warm-up
+    if (heartRate < 140) return Colors.yellowAccent;    // 💛 Fat Burn
+    if (heartRate < 170) return Colors.orangeAccent;    // 🧡 Cardio
+    return Colors.redAccent;                            // ❤️ Peak
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +44,11 @@ class DeviceCardWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isConnected
-                ? _getHeartRateZoneColor(heartRate ?? 0, isConnected)
-                .withValues(alpha: 0.3)
+                ? _getHeartRateZoneColor(heartRate ?? 0, isConnected).withOpacity(0.5)
                 : AppTheme.borderColor,
             width: 2,
           ),
+
           boxShadow: [
             BoxShadow(
               color: AppTheme.shadowColor,
