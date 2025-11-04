@@ -4,63 +4,73 @@
     <meta charset="utf-8" />
     <title>Polar HR Receiver Dashboard</title>
     <style>
+        :root {
+          --bg-dark: #0e1a25;
+          --bg-card: #152737;
+          --accent: #2af598;
+          --text-light: #e0f2ff;
+        }
+
         body {
-          background: #000;
-          color: #0f0;
-          font-family: 'Segoe UI', sans-serif;
+          background: var(--bg-dark);
+          color: var(--text-light);
+          font-family: 'Roboto', 'Segoe UI', sans-serif;
           display: flex;
           flex-direction: column;
           align-items: center;
           margin: 0;
           height: 100vh;
+          padding: 0;
         }
+
         h1 {
           margin-top: 1rem;
-          color: #0f0;
-          font-size: 1.8rem;
+          color: var(--accent);
+          font-size: 1.6rem;
+          letter-spacing: 1px;
         }
+
         #grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 1rem;
           width: 90%;
           max-width: 1200px;
           margin-top: 1rem;
         }
+
         .card {
-          border: 2px solid #0f0;
-          border-radius: 12px;
+          background: var(--bg-card);
+          border-radius: 16px;
           padding: 1rem;
           text-align: center;
-          background: rgba(0, 255, 0, 0.05);
-          transition: background 0.3s, transform 0.3s;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+          border: 2px solid transparent;
         }
-        .card.active {
-          background: rgba(0, 255, 0, 0.15);
-          transform: scale(1.03);
-        }
+
         .device {
-          font-size: 1.2rem;
-          margin-bottom: 0.5rem;
-          color: #8f8;
+          font-size: 1rem;
+          color: #9ed0ff;
+          margin-bottom: 0.4rem;
         }
+
         .hr {
-          font-size: 2.8rem;
-          font-weight: bold;
-          color: #0f0;
+          font-size: 3rem;
+          font-weight: 700;
+          transition: color 0.3s;
         }
+
         .timestamp {
           font-size: 0.8rem;
-          color: #888;
+          color: #89a;
           margin-top: 0.3rem;
         }
     </style>
 </head>
 <body>
-<h1>❤️ Polar HR Dashboard</h1>
-<div id="grid">
-    <!-- จะสร้างการ์ด 8 เครื่องโดยอัตโนมัติ -->
-</div>
+<h1>💓 Polar HR Dashboard</h1>
+<div id="grid"></div>
 
 <script>
     const wsUrl = 'wss://polar-hr-monitor-analysis.onrender.com';
@@ -69,7 +79,7 @@
     const devices = {};
     const grid = document.getElementById('grid');
 
-    // ✅ เตรียมการ์ดไว้ 8 ใบล่วงหน้า
+    // เตรียมการ์ด 8 เครื่อง
     for (let i = 1; i <= 8; i++) {
       const div = document.createElement('div');
       div.className = 'card';
@@ -82,35 +92,43 @@
       grid.appendChild(div);
     }
 
-    socket.onopen = () => {
-      console.log('✅ Connected to WebSocket server');
-    };
+    // สีตาม HR zone
+    function getHrColor(hr) {
+      if (hr < 90) return '#3fa9f5';     // blue
+      if (hr < 120) return '#00ff99';    // green
+      if (hr < 140) return '#f5e642';    // yellow
+      if (hr < 170) return '#ff9933';    // orange
+      return '#ff3366';                  // red
+    }
+
+    socket.onopen = () => console.log('✅ Connected to WebSocket server');
 
     socket.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
         const hr = msg.hr ?? msg.value;
         const name = msg.deviceName ?? msg.device ?? 'Unknown';
-
         if (!hr) return;
 
-        // ถ้ายังไม่มีอุปกรณ์นี้ใน list
+        // สร้าง mapping device → card index
         if (!devices[name]) {
           const available = Object.keys(devices).length + 1;
-          if (available > 8) return; // แสดงสูงสุด 8 เครื่อง
+          if (available > 8) return;
           devices[name] = available;
         }
 
         const idx = devices[name];
+        const card = document.getElementById('card' + idx);
         const hrElem = document.getElementById('hr' + idx);
         const devElem = document.getElementById('device' + idx);
         const timeElem = document.getElementById('time' + idx);
-        const cardElem = document.getElementById('card' + idx);
 
-        hrElem.textContent = hr + ' bpm';
+        // อัปเดต UI
         devElem.textContent = name;
+        hrElem.textContent = hr + ' bpm';
+        hrElem.style.color = getHrColor(hr);
+        card.style.borderColor = getHrColor(hr);
         timeElem.textContent = new Date().toLocaleTimeString();
-        cardElem.classList.add('active');
       } catch (err) {
         console.error('❌ Error parsing message:', err);
       }
@@ -121,9 +139,7 @@
       setTimeout(() => location.reload(), 5000);
     };
 
-    socket.onerror = (err) => {
-      console.error('⚠️ WebSocket error', err);
-    };
+    socket.onerror = (err) => console.error('⚠️ WebSocket error', err);
 </script>
 </body>
 </html>
